@@ -7,24 +7,28 @@
 #include "mapreduce.h"
 
 // Declaring data structure
-typedef struct MR {
+typedef struct {
   char *key;
   char *value;
   int partition_num;
-}**table;
+}MR;
 
-typedef struct fileName {
+typedef struct {
     char *argv[];
     int argc;
-}*fname1;
+}fileName;
 
-typedef struct Counter {
+typedef struct {
     int index;
-}*pnum;
+}Counter;
 
 Map maps;
 Reducer reduces;
 Partitioner partitions;
+
+MR **table;
+fileName *fname1;
+Counter *pnum;
 
 void MR_Emit(char *key, char *value) {
     // TODO: Take key and value from different mappers and store them in a partition
@@ -133,7 +137,7 @@ void *mappers_exe(void *arg) {
     return NULL;
 }
 
-void sort() {
+void sort(table[pno], first, ) {
     // TODO: Sort the table in ascending order of key/value pairs
     int i,j;
     char *pivot, *temp;
