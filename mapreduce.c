@@ -11,8 +11,7 @@ typedef struct MR {
   char *key;
   char *value;
   int partition_num;
-};
-// What should be the SIZE ?? Dynamically allocate the structure ?? 
+}*table;
 
 void MR_Emit(char *key, char *value) {
     // Take key and value from different mappers and store them in a partition
@@ -33,8 +32,40 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
     // (i.e., keys are not hashed into random partitions as in the default partition function)
 }
 
+
 void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce, 
             int num_reducers, Partitioner partition, int num_partitions) {
     // Use Mapper to map filenames to Map() ??
+    int i,j;
+    // struct MR params[num_mappers];
+    pthread_t p[num_mappers];
+    pthread_t p[num_reducers];
+
+    //struct MR *table = malloc(sizeof(MR) * num_partitions);
+    table = malloc(sizeof(MR) * num_partitions);
+    if (table == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
+
+    // Need to do some sort of scheduling to map the files to the mappers
+    // and maybe pass those as parameters to mappers_exe
+
+    for(i = 0; i < num_mappers; i++) {
+        pthread_create(&p[i], NULL, mappers_exe, (void *)&params[i]);
+    }
+
+    for(i = 0; i < num_mappers; i++) {
+        pthread_join(p[i], NULL);
+    }
+}
+
+void *mappers_exe(void *arg) { 
+    // struct MR *params = (struct MR *)arg;
+    // for(int i = 0;i < argc - 1; i++) {
+    //     map(argv[i]);
+    // }
+    return NULL;
 }
 
