@@ -31,6 +31,8 @@ MR **table;
 fileName *fname1;
 Counter *pnum;
 
+int MAX_SIZE = 5;
+
 void MR_Emit(char *key, char *value) {
     // TODO: Take key and value from different mappers and store them in a partition
     // such that later reducers can access them, given constraints. 
@@ -39,6 +41,17 @@ void MR_Emit(char *key, char *value) {
     // Use locks
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
+    if(pnum[pno]->index == MAX_SIZE) {
+        for(i = 0; i < num_partitions; i++) {
+            table[i] = (MR *)malloc(sizeof(MR) * 10000);
+            if (table[i] == NULL)
+            {
+                printf("Memory Allocation Failed!\n");
+                exit(1);
+            }
+        }
+    }
+
     table[pno] = malloc(sizeof(MR) * length?);
     table[pno][pnum[pno]->index]->key = key;
     table[pno][pnum[pno]->index]->value = value;
@@ -85,27 +98,19 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     // Note: Need to put this in MR_Emit()? Also need to figure out realloc for expansion
     //unsigned long pno;
-    // for(i = 0; i < num_partitions; i++) {
-    //     //pno = (*partitions)(key, num_partitions);
-    //     table[i] = (MR *)malloc(sizeof(MR) * 10000);
-    //     if (table[i] == NULL)
-    //     {
-    //         printf("Memory Allocation Failed!\n");
-    //         exit(1);
-    //     }
-    // }
+    
 
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
 
     // #ofFiles = #ofThreads
     for(i = 0; i < argc - 1; i++) {
-        fname1[i]->argc = argc;
-        fname1[i]->argv = argv[i+1];
+        fname[i]->argc = argc;
+        fname[i]->argv = argv[i+1];
     }
 
     for(i = 0; i < num_mappers; i++) {
-        pthread_create(&p[i], NULL, mapper_exe, (void *)&fname1[i]);
+        pthread_create(&p[i], NULL, mapper_exe, (void *)&fname[i]);
     }
 
     for(i = 0; i < num_mappers; i++) {
