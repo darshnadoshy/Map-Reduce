@@ -33,14 +33,12 @@ MR **table;
 fileName *fname;
 Counter *pnum;
 
-
 static int cmpstringp(const void *p1, const void *p2)
 {
     const MR table1 =  * (MR *)p1;
     const MR table2 = * (MR *)p2;
     return strcmp(table1.key, table2.key);
 }
-
 
 void MR_Emit(char *key, char *value) {
     // TODO: Take key and value from different mappers and store them in a partition
@@ -71,10 +69,8 @@ void MR_Emit(char *key, char *value) {
         }
         
     }
-    
     table[pno][pnum[pno].index].key = key;
     table[pno][pnum[pno].index].value = value;
-    // printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
     pnum[pno].index++;
 }
 
@@ -130,11 +126,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
 
-    // Mapping files to their threads
-    // TODO: Sort files according to their size and then map them
     int pos;
     fname = (fileName *)malloc(sizeof(fileName) * num_mappers);
-    // CHECK: What happens when files < mappers?
+    for(int i = 0; i < num_mappers; i++)
+    {
+        fname[i].index = 0;
+    }
+
+    // Mapping files to their threads
+    // TODO: Sort files according to their size and then map them
     for (i = 1; i < argc; i++) {
         pos = i % num_mappers;
         if(pos == 0) {
@@ -146,7 +146,13 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             fname[pos - 1].index++;
         }   
     }
+    for(i = 0; i < num_mappers; i++) {
+        if(fname[i].index == 0) {
+            fname[i].filename = NULL;
+        }
+    }
 
+    // Creating mapper threads
     for(i = 0; i < num_mappers; i++) {
         pthread_create(&p[i], NULL, mapper_exe, (void *)&fname[i]);
     }
@@ -159,6 +165,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         qsort(table[1], pnum[1].index, sizeof(MR), cmpstringp);
 
 
+    // Creating reducer threads
     for(i = 0; i < num_reducers; i++) {
         pthread_create(&q[i], NULL, reducer_exe, (void *)??);
     }
@@ -169,9 +176,10 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 }
 
 void *mapper_exe(void *arg) { 
-    // Case 1: Calling map once for each file
     struct fileName *fname = (struct MR *)arg;
-    
+    for(int i = 0; i < fname.index; i++){
+        map(fname.filename[i]);
+    }
     return NULL;
 }
 void *reducer_exe(void *arg) {
