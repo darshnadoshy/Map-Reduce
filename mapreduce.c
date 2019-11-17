@@ -9,10 +9,47 @@
 // TODO: Change implementation to linked lists!!
 
 // Declaring data structure
-typedef struct {
+typedef struct MR{
   char *key;
   char *value;
+  struct MR *next; 
 }MR;
+
+// Helper function to return a new node of the linked list
+struct Node* newNode(char *key, char* value)
+{
+	MR* newNode = (MR*)malloc(sizeof(MR *));
+    if (newNode == NULL)
+    {
+        printf("Memory Allocation Failed!\n");
+        exit(1);
+    }
+	newNode->key = key;
+    newNode->value = value;
+	newNode->next = NULL;
+	return newNode;
+}
+
+// Function to insert the given node into the correct sorted position in
+// the given list sorted in increasing order
+void SortedInsert(struct MR** head, struct MR* newNode)
+{
+	// Special case for the head end
+	if (*head == NULL || (*head)->data >= newNode->data)
+	{
+		newNode->next = *head;
+		*head = newNode;
+		return;
+	}
+
+	// Locate the node before the point of insertion
+	struct Node* current = *head;
+	while(current->next != NULL && current->next->key < newNode->key)
+		current = current->next;
+
+	newNode->next = current->next;
+	current->next = newNode;
+}
 
 typedef struct {
     char *argv[];
@@ -40,15 +77,10 @@ void MR_Emit(char *key, char *value) {
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
     // table[pno] = malloc(sizeof(MR) * length?);
-    // if (table[partitions] == NULL)
-    // {
-    //     printf("Memory Allocation Failed!\n");
-    //     exit(1);
-    // }
-    
-    table[pno][pnum[pno]->index]->key = key;
-    table[pno][pnum[pno]->index]->value = value;
-    pnum[pno]->index++;
+    // table[pno][pnum[pno]->index]->key = key;
+    // table[pno][pnum[pno]->index]->value = value;
+    // pnum[pno]->index++;
+    SortedInsert(&table[pno], newNode(key, value));
 }
 
 // Got it from the specs
@@ -92,15 +124,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     // Note: Need to put this in MR_Emit()? Also need to figure out realloc for expansion
     //unsigned long pno;
-    for(i = 0; i < num_partitions; i++) {
-        //pno = (*partitions)(key, num_partitions);
-        table[i] = (MR *)malloc(sizeof(MR) * 10000);
-        if (table[i] == NULL)
-        {
-            printf("Memory Allocation Failed!\n");
-            exit(1);
-        }
-    }
+    // for(i = 0; i < num_partitions; i++) {
+    //     //pno = (*partitions)(key, num_partitions);
+    //     table[i] = (MR *)malloc(sizeof(MR) * 10000);
+    //     if (table[i] == NULL)
+    //     {
+    //         printf("Memory Allocation Failed!\n");
+    //         exit(1);
+    //     }
+    // }
 
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
@@ -138,7 +170,6 @@ void *mapper_exe(void *arg) {
     }
     return NULL;
 }
-
 void *reducer_exe(void *arg) {
 
 }
@@ -150,32 +181,3 @@ char *get_next(char *key, int num_partitions) {
     return table[pno][pnum[pno]->index]->value;
 }
 
-void sort(table[pno], first, ) {
-    // TODO: Sort the table in ascending order of key/value pairs
-    int i,j;
-    char *pivot, *temp;
-
-   if(first<last){
-      pivot=first;
-      i=first;
-      j=last;
-
-      while(i<j){
-         while(number[i]<=number[pivot]&&i<last)
-            i++;
-         while(number[j]>number[pivot])
-            j--;
-         if(i<j){
-            temp=number[i];
-            number[i]=number[j];
-            number[j]=temp;
-         }
-      }
-
-      temp=number[pivot];
-      number[pivot]=number[j];
-      number[j]=temp;
-      sort(number,first,j-1);
-      sort(number,j+1,last);
-   }
-}
