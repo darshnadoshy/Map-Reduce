@@ -30,6 +30,7 @@ Partitioner partitions;
 MR **table;
 fileName *fname1;
 Counter *pnum;
+
 static int cmpstringp(const void *p1, const void *p2)
 {
     const MR table1 =  * (MR *)p1;
@@ -74,7 +75,7 @@ void MR_Emit(char *key, char *value) {
     // table[pno] = malloc(sizeof(MR) * length?);
     table[pno][pnum[pno].index].key = key;
     table[pno][pnum[pno].index].value = value;
-    printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
+    // printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
     pnum[pno].index++;
 }
 
