@@ -12,44 +12,7 @@
 typedef struct MR{
   char *key;
   char *value;
-  struct MR *next; 
 }MR;
-
-// Helper function to return a new node of the linked list
-struct Node* newNode(char *key, char* value)
-{
-	MR* newNode = (MR*)malloc(sizeof(MR *));
-    if (newNode == NULL)
-    {
-        printf("Memory Allocation Failed!\n");
-        exit(1);
-    }
-	newNode->key = key;
-    newNode->value = value;
-	newNode->next = NULL;
-	return newNode;
-}
-
-// Function to insert the given node into the correct sorted position in
-// the given list sorted in increasing order
-void SortedInsert(struct MR** head, struct MR* newNode)
-{
-	// Special case for the head end
-	if (*head == NULL || (*head)->data >= newNode->data)
-	{
-		newNode->next = *head;
-		*head = newNode;
-		return;
-	}
-
-	// Locate the node before the point of insertion
-	struct Node* current = *head;
-	while(current->next != NULL && current->next->key < newNode->key)
-		current = current->next;
-
-	newNode->next = current->next;
-	current->next = newNode;
-}
 
 typedef struct {
     char *argv[];
@@ -76,11 +39,10 @@ void MR_Emit(char *key, char *value) {
     // Use locks
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
-    // table[pno] = malloc(sizeof(MR) * length?);
-    // table[pno][pnum[pno]->index]->key = key;
-    // table[pno][pnum[pno]->index]->value = value;
-    // pnum[pno]->index++;
-    SortedInsert(&table[pno], newNode(key, value));
+    table[pno] = malloc(sizeof(MR) * length?);
+    table[pno][pnum[pno]->index]->key = key;
+    table[pno][pnum[pno]->index]->value = value;
+    pnum[pno]->index++;
 }
 
 // Got it from the specs
@@ -107,7 +69,6 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     maps = map;
     reduces = reduce;
     partitions = partition;
-    // struct MR params[num_mappers];
 
     pnum = calloc(num_partitions, sizeof(Counter));
 
