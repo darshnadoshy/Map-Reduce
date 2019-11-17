@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct {
     int index;
+    int MAX_SIZE;
 }Counter;
 
 Map maps;
@@ -31,7 +32,15 @@ MR **table;
 fileName *fname1;
 Counter *pnum;
 
-int MAX_SIZE = 5;
+static int cmpstringp(MR *p1, MR *p2)
+       {
+           /* The actual arguments to this function are "pointers to
+              pointers to char", but strcmp(3) arguments are "pointers
+              to char", hence the following cast plus dereference */
+
+           return strcmp(p1 -> key, p2->key);
+       }
+
 
 void MR_Emit(char *key, char *value) {
     // TODO: Take key and value from different mappers and store them in a partition
@@ -41,18 +50,31 @@ void MR_Emit(char *key, char *value) {
     // Use locks
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
-    if(pnum[pno]->index == MAX_SIZE) {
-        for(i = 0; i < num_partitions; i++) {
-            table[i] = (MR *)malloc(sizeof(MR) * 10000);
-            if (table[i] == NULL)
-            {
-                printf("Memory Allocation Failed!\n");
-                exit(1);
-            }
+    if(pnum[pno]->index == pnum[pno]->MAX_SIZE)
+    {
+        pnum[pno]->MAX_SIZE = pnum[pno]->MAX_SIZE * 2;
+        table[pno] = (MR *)realloc(table[pno], (sizeof(MR) * pnum[pno]->MAX_SIZE));
+        if (table[pno] == NULL)
+        {
+            printf("Memory Allocation Failed!\n");
+            exit(1);
         }
     }
+    if(pnum[pno]->index == 0)
+    {
+        table[pno] = (MR *)malloc(sizeof(MR) * MAX_SIZE);
+        if (table[pno] == NULL)
+        {
+            printf("Memory Allocation Failed!\n");
+            exit(1);
+        }
+        
+    }
+    // if(pnum[pno]->index < MAX_SIZE) {
+        
+    // }
 
-    table[pno] = malloc(sizeof(MR) * length?);
+    // table[pno] = malloc(sizeof(MR) * length?);
     table[pno][pnum[pno]->index]->key = key;
     table[pno][pnum[pno]->index]->value = value;
     pnum[pno]->index++;
@@ -83,8 +105,18 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     reduces = reduce;
     partitions = partition;
 
-    pnum = calloc(num_partitions, sizeof(Counter));
+    // global_np = num_partitions;
+    // This next line is sketchy. Change it later
+    // pnum = calloc(num_partitions, sizeof(Counter));
 
+    // Set the initial values of the partition counters
+    pnum = (Counter *)malloc(sizeof(Counter) * num_partitions);
+    for(int i = 0; i < num_partitions; i++)
+    {
+        pnum[i]->index = 0;
+        pnum[i]->MAX_SIZE = 5;
+    }
+    
     pthread_t p[num_mappers];
     pthread_t q[num_reducers];
 
@@ -117,7 +149,11 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         pthread_join(p[i], NULL);
     }
     
-    sort();
+    // Code for qsort should go in here.
+    // qsort();
+    for(int i = 0; i < num_partitions; i++)
+        qsort(table[i], pnum[i]->index, sizeof(MR *), cmpstringp);
+
 
     for(i = 0; i < num_reducers; i++) {
         pthread_create(&q[i], NULL, reducer_exe, (void *)??);
