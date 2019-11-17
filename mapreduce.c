@@ -15,7 +15,8 @@ typedef struct MR{
 }MR;
 
 typedef struct {
-    
+    char *filename[];
+    int index;
 }fileName;
 
 typedef struct {
@@ -29,15 +30,26 @@ Reducer reduces;
 Partitioner partitions;
 
 MR **table;
-fileName *fname1;
+fileName *fname;
 Counter *pnum;
 
+<<<<<<< HEAD
+static int cmpstringp(MR *p1, MR *p2)
+       {
+           /* The actual arguments to this function are "pointers to
+              pointers to char", but strcmp(3) arguments are "pointers
+              to char", hence the following cast plus dereference */
+
+           return strcmp(p1->key, p2->key);
+       }
+=======
 static int cmpstringp(const void *p1, const void *p2)
 {
     const MR table1 =  * (MR *)p1;
     const MR table2 = * (MR *)p2;
     return strcmp(table1.key, table2.key);
 }
+>>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 
 
 void MR_Emit(char *key, char *value) {
@@ -69,6 +81,11 @@ void MR_Emit(char *key, char *value) {
         }
         
     }
+<<<<<<< HEAD
+    table[pno][pnum[pno]->index]->key = key;
+    table[pno][pnum[pno]->index]->value = value;
+    pnum[pno]->index++;
+=======
     // if(pnum[pno]->index < MAX_SIZE) {
         
     // }
@@ -78,6 +95,7 @@ void MR_Emit(char *key, char *value) {
     table[pno][pnum[pno].index].value = value;
     // printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
     pnum[pno].index++;
+>>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 }
 
 
@@ -94,13 +112,12 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
     // TODO: ensures  that keys are in a sorted order across the partitions 
     // (i.e., keys are not hashed into random partitions as in the default partition function)
 
-    // TODO: single call to qsort for each partition
 }
 
 
 void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce, 
             int num_reducers, Partitioner partition, int num_partitions) {
-    int i;
+    int i, j;
 
     maps = map;
     reduces = reduce;
@@ -133,7 +150,22 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
 
-    
+    // Mapping files to their threads
+    // TODO: Sort files according to their size and then map them
+    int pos;
+    fname = (fileName *)malloc(sizeof(fileName) * num_mappers);
+    // CHECK: What happens when files < mappers?
+    for (i = 1; i < argc; i++) {
+        pos = i % num_mappers;
+        if(pos == 0) {
+            fname[num_mappers - 1].filename[fname[num_mappers - 1].index] = argv[i];
+            fname[num_mappers - 1].index++;
+        }
+        else {
+            fname[pos - 1].filename[fname[pos - 1].index] = argv[i];
+            fname[pos - 1].index++;
+        }   
+    }
 
     for(i = 0; i < num_mappers; i++) {
         pthread_create(&p[i], NULL, mapper_exe, (void *)&fname[i]);
@@ -143,11 +175,19 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         pthread_join(p[i], NULL);
     }
     
+<<<<<<< HEAD
+    for(int i = 0; i < num_partitions; i++) {
+        qsort(table[i], pnum[i]->index, sizeof(MR *), cmpstringp);
+    }
+    
+    // TODO: map partitions to reducers and pass that as an arg to 
+=======
     // Code for qsort should go in here.
     // qsort();
     for(int i = 0; i < num_partitions; i++)
         qsort(table[1], pnum[1].index, sizeof(MR), cmpstringp);
 
+>>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 
     for(i = 0; i < num_reducers; i++) {
         pthread_create(&q[i], NULL, reducer_exe, (void *)??);
@@ -160,10 +200,8 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
 void *mapper_exe(void *arg) { 
     // Case 1: Calling map once for each file
-    struct fileName *fname2 = (struct MR *)arg;
-    for(int i = 0;i < fname2->argc - 1; i++) {
-        map(fname2->argv[i]);
-    }
+    struct fileName *fname = (struct MR *)arg;
+    
     return NULL;
 }
 void *reducer_exe(void *arg) {
