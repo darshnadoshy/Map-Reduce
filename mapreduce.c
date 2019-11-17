@@ -22,6 +22,7 @@ typedef struct {
 typedef struct {
     int index;
     int MAX_SIZE;
+    int get_index;
 }Counter;
 
 Map maps;
@@ -108,6 +109,10 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     {
         pnum[i].index = 0;
         pnum[i].MAX_SIZE = 5;
+<<<<<<< HEAD
+=======
+        pnum[i].get_index = 0;
+>>>>>>> 6c55ebbcc8e69afe878bdceec219c2e2a186b080
     }
     
     pthread_t p[num_mappers];
@@ -189,7 +194,13 @@ void *reducer_exe(void *arg) {
 char *get_next(char *key, int num_partitions) {
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
-
-    return table[pno][pnum[pno]->index]->value;
+    for(int i = pnum[pno].get_index; i <= pnum[pno]->index; i++)
+    {
+        if(strcmp(table[pno][i], key) == 0)
+        {
+            pnum[pno].get_index++;
+            return table[pno][i]->value;
+        }
+    }
 }
 
