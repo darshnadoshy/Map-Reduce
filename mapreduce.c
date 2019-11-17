@@ -124,15 +124,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     // Note: Need to put this in MR_Emit()? Also need to figure out realloc for expansion
     //unsigned long pno;
-    for(i = 0; i < num_partitions; i++) {
-        //pno = (*partitions)(key, num_partitions);
-        table[i] = (MR *)malloc(sizeof(MR) * 10000);
-        if (table[i] == NULL)
-        {
-            printf("Memory Allocation Failed!\n");
-            exit(1);
-        }
-    }
+    // for(i = 0; i < num_partitions; i++) {
+    //     //pno = (*partitions)(key, num_partitions);
+    //     table[i] = (MR *)malloc(sizeof(MR) * 10000);
+    //     if (table[i] == NULL)
+    //     {
+    //         printf("Memory Allocation Failed!\n");
+    //         exit(1);
+    //     }
+    // }
 
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
@@ -170,9 +170,12 @@ void *mapper_exe(void *arg) {
     }
     return NULL;
 }
+<<<<<<< HEAD
 // void quicksort(int table[25],int first,int last)
 
 <<<<<<< HEAD
+=======
+>>>>>>> 19ff4f7... Deleted some code
 void *reducer_exe(void *arg) {
 
 }
@@ -184,6 +187,7 @@ char *get_next(char *key, int num_partitions) {
     return table[pno][pnum[pno]->index]->value;
 }
 
+<<<<<<< HEAD
 void sort(table[pno], first, ) {
 =======
 void sort(MR *table, int first, int last) {
@@ -225,3 +229,5 @@ void sort(MR *table, int first, int last) {
     sort(table,j+1,last);
    }
 }
+=======
+>>>>>>> 19ff4f7... Deleted some code
