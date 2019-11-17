@@ -6,11 +6,12 @@
 #include <semaphore.h>
 #include "mapreduce.h"
 
+// TODO: Change implementation to linked lists!!
+
 // Declaring data structure
 typedef struct {
   char *key;
   char *value;
-  int partition_num;
 }MR;
 
 typedef struct {
@@ -69,7 +70,7 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
 
 void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce, 
             int num_reducers, Partitioner partition, int num_partitions) {
-    int i,j;
+    int i;
 
     maps = map;
     reduces = reduce;
@@ -90,11 +91,11 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     }
 
     // Note: Need to put this in MR_Emit()? Also need to figure out realloc for expansion
-    unsigned long pno;
+    //unsigned long pno;
     for(i = 0; i < num_partitions; i++) {
-        pno = (*partitions)(key, num_partitions);
-        table[pno] = (MR *)malloc(sizeof(MR) * 10000);
-        if (table[pno] == NULL)
+        //pno = (*partitions)(key, num_partitions);
+        table[i] = (MR *)malloc(sizeof(MR) * 10000);
+        if (table[i] == NULL)
         {
             printf("Memory Allocation Failed!\n");
             exit(1);
@@ -104,13 +105,14 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
 
+    // #ofFiles = #ofThreads
     for(i = 0; i < argc - 1; i++) {
         fname1[i]->argc = argc;
-        fname1[i]->argv = argv;
+        fname1[i]->argv = argv[i+1];
     }
 
     for(i = 0; i < num_mappers; i++) {
-        pthread_create(&p[i], NULL, mappers_exe, (void *)&fname1[i]);
+        pthread_create(&p[i], NULL, mapper_exe, (void *)&fname1[i]);
     }
 
     for(i = 0; i < num_mappers; i++) {
@@ -128,13 +130,24 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     }
 }
 
-void *mappers_exe(void *arg) { 
+void *mapper_exe(void *arg) { 
     // Case 1: Calling map once for each file
     struct fileName *fname2 = (struct MR *)arg;
     for(int i = 0;i < fname2->argc - 1; i++) {
         map(fname2->argv[i]);
     }
     return NULL;
+}
+
+void *reducer_exe(void *arg) {
+
+}
+
+char *get_next(char *key, int num_partitions) {
+    unsigned long pno;
+    pno = (*partitions)(key, num_partitions);
+
+    return table[pno][pnum[pno]->index]->value;
 }
 
 void sort(table[pno], first, ) {
