@@ -109,10 +109,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     {
         pnum[i].index = 0;
         pnum[i].MAX_SIZE = 5;
-<<<<<<< HEAD
-=======
         pnum[i].get_index = 0;
->>>>>>> 6c55ebbcc8e69afe878bdceec219c2e2a186b080
     }
     
     pthread_t p[num_mappers];
@@ -165,7 +162,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     }
     
     for(int i = 0; i < num_partitions; i++) {
-        qsort(table[i], pnum[i]->index, sizeof(MR ), cmpstringp);
+        qsort(table[i], pnum[i].index, sizeof(MR), cmpstringp);
     }
     
     // TODO: map partitions to reducers and pass that as an arg to 
