@@ -87,7 +87,64 @@ unsigned long MR_DefaultHashPartition(char *key, int num_partitions) {
 unsigned long MR_SortedPartition(char *key, int num_partitions) {
     // TODO: ensures  that keys are in a sorted order across the partitions 
     // (i.e., keys are not hashed into random partitions as in the default partition function)
+    int bits = 0;
+    int temp = num_partitions;
+    unsigned long temp_key;
+    while (temp >>= 1) bits++;
+    temp_key = strtoul(key, NULL, 0);
 
+    temp_key = temp_key >> (32 - bits);
+
+    int bits = 0;
+    int temp = num_partitions;
+    unsigned long temp_key = 0;
+    char key[] = "}}}}";
+    
+    
+    while (temp >>= 1) bits++;
+    // printf("Bits: %d\n",bits);
+    
+    int len = 0;
+    // printf("Length: %d\n", strlen(key));
+    if(strlen(key) >= 4)
+        len = 4;
+    else 
+        len = strlen(key);
+    
+    // printf("Before: %lu \n", temp_key);
+    if(len == 4) 
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            // printf("key[%d] = %lu\n", i , (unsigned long) key[i]);
+            temp_key = temp_key << 8;
+            if(key[i]!= NULL)
+                temp_key += (unsigned long) key[i];
+            // printf("Inside: %lu \n", temp_key);
+        }
+    }
+    else
+    {
+        int i = 0;
+        int mov = (8 *(4 - len));
+        temp_key = temp_key << mov;
+        // printf("Temp: %lu \n", temp_key);
+        while(len != 0)
+        {
+            temp_key = temp_key << 8;
+            temp_key += (unsigned long) key[i];
+            // printf("Inside: %lu \n", temp_key);
+            len--;
+            i++;
+        }
+    }
+    temp_key = temp_key >> (32 - bits);
+    
+    // printf("After: %lu \n", temp_key);
+    
+    printf("After: %lu \n", temp_key);
+
+    return temp_key;
 }
 
 
@@ -190,14 +247,19 @@ void *reducer_exe(void *arg) {
 
 char *get_next(char *key, int num_partitions) {
     unsigned long pno;
+    int flag = 0;
     pno = (*partitions)(key, num_partitions);
     for(int i = pnum[pno].get_index; i <= pnum[pno]->index; i++)
     {
-        if(strcmp(table[pno][i], key) == 0)
+        if(strcmp(table[pno][i].key, key) == 0)
         {
+            flag = 1;
             pnum[pno].get_index++;
             return table[pno][i]->value;
         }
     }
+    //if key is not found
+    if(flag == 0)
+        return NULL;
 }
 
