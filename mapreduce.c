@@ -9,10 +9,47 @@
 // TODO: Change implementation to linked lists!!
 
 // Declaring data structure
-typedef struct {
+typedef struct MR{
   char *key;
   char *value;
+  int partition_num;
 }MR;
+
+// Helper function to return a new node of the linked list
+struct Node* newNode(char *key, char* value)
+{
+	MR* newNode = (MR*)malloc(sizeof(MR *));
+    if (newNode == NULL)
+    {
+        printf("Memory Allocation Failed!\n");
+        exit(1);
+    }
+	newNode->key = key;
+    newNode->value = value;
+	newNode->next = NULL;
+	return newNode;
+}
+
+// Function to insert the given node into the correct sorted position in
+// the given list sorted in increasing order
+void SortedInsert(struct MR** head, struct MR* newNode)
+{
+	// Special case for the head end
+	if (*head == NULL || (*head)->data >= newNode->data)
+	{
+		newNode->next = *head;
+		*head = newNode;
+		return;
+	}
+
+	// Locate the node before the point of insertion
+	struct Node* current = *head;
+	while(current->next != NULL && current->next->key < newNode->key)
+		current = current->next;
+
+	newNode->next = current->next;
+	current->next = newNode;
+}
 
 typedef struct {
     char *argv[];
@@ -40,15 +77,10 @@ void MR_Emit(char *key, char *value) {
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
     // table[pno] = malloc(sizeof(MR) * length?);
-    // if (table[partitions] == NULL)
-    // {
-    //     printf("Memory Allocation Failed!\n");
-    //     exit(1);
-    // }
-    
-    table[pno][pnum[pno]->index]->key = key;
-    table[pno][pnum[pno]->index]->value = value;
-    pnum[pno]->index++;
+    // table[pno][pnum[pno]->index]->key = key;
+    // table[pno][pnum[pno]->index]->value = value;
+    // pnum[pno]->index++;
+    SortedInsert(&table[pno], newNode(key, value));
 }
 
 // Got it from the specs
@@ -138,7 +170,9 @@ void *mapper_exe(void *arg) {
     }
     return NULL;
 }
+// void quicksort(int table[25],int first,int last)
 
+<<<<<<< HEAD
 void *reducer_exe(void *arg) {
 
 }
@@ -151,31 +185,43 @@ char *get_next(char *key, int num_partitions) {
 }
 
 void sort(table[pno], first, ) {
+=======
+void sort(MR *table, int first, int last) {
+>>>>>>> 7c10ce8... Added linked list implementation
     // TODO: Sort the table in ascending order of key/value pairs
-    int i,j;
-    char *pivot, *temp;
+    int i, j, pivot;
+    char  *t_key, *t_val;
 
-   if(first<last){
-      pivot=first;
-      i=first;
-      j=last;
+    if(first < last){
+        pivot = first;
+        i = first;
+        j = last;
 
-      while(i<j){
-         while(number[i]<=number[pivot]&&i<last)
+        while(i < j){
+            while((strcmp(table[i]->key,table[pivot]->key) < 0) && (i < last))
             i++;
-         while(number[j]>number[pivot])
+            while(strcmp(table[j]->key,table[pivot]->key) > 0 )
             j--;
-         if(i<j){
-            temp=number[i];
-            number[i]=number[j];
-            number[j]=temp;
-         }
-      }
+            if(i < j){
+            strcpy(t_key, table[i]->key);
+            strcpy(table[i]->key, table[j]->key);
+            strcpy(table[j]->key, t_key);
 
-      temp=number[pivot];
-      number[pivot]=number[j];
-      number[j]=temp;
-      sort(number,first,j-1);
-      sort(number,j+1,last);
+            strcpy(t_val,table[i]->value);
+            strcpy(table[i]->value,table[j]->value);
+            strcpy(table[j]->value, t_val);
+            }
+    }
+
+    strcpy(t_key, table[pivot]->key);
+    strcpy(table[pivot]->key, table[j]->key);
+    strcpy(table[j]->key, t_key);
+    
+    strcpy(t_val, table[pivot]->value);
+    strcpy(table[pivot]->value, table[j]->value);
+    strcpy(table[j]->value, t_val);
+    
+    sort(table,first,j-1);
+    sort(table,j+1,last);
    }
 }
