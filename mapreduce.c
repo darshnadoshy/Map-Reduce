@@ -15,9 +15,14 @@ typedef struct MR{
 }MR;
 
 typedef struct {
-    char *filename[];
+    char *name[];
     int index;
 }fileName;
+
+typedef struct {
+    unsigned long partition_no[];
+    int index;
+}Part;
 
 typedef struct {
     int index;
@@ -26,11 +31,12 @@ typedef struct {
 }Counter;
 
 Map maps;
-Reducer reduces;
+Reducer reducers;
 Partitioner partitions;
 
 MR **table;
 fileName *fname;
+Part *part;
 Counter *pnum;
 
 static int cmpstringp(const void *p1, const void *p2)
@@ -47,8 +53,8 @@ void MR_Emit(char *key, char *value) {
     // TODO: What should be the length of the array? Need to figure out realloc()
     // Use locks
     unsigned long pno;
-    pno = 1;
-    // pno = (*partitions)(key, num_partitions);
+    // pno = 1;
+    pno = (*partitions)(key, num_partitions);
     if(pnum[pno].index == pnum[pno].MAX_SIZE)
     {
         pnum[pno].MAX_SIZE = pnum[pno].MAX_SIZE * 2;
@@ -96,7 +102,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     int i, j;
 
     maps = map;
-    reduces = reduce;
+    reducers = reduce;
     partitions = partition;
 
     // global_np = num_partitions;
@@ -128,6 +134,11 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     int pos;
     fname = (fileName *)malloc(sizeof(fileName) * num_mappers);
+    if (fname == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
     for(int i = 0; i < num_mappers; i++)
     {
         fname[i].index = 0;
@@ -138,17 +149,17 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     for (i = 1; i < argc; i++) {
         pos = i % num_mappers;
         if(pos == 0) {
-            fname[num_mappers - 1].filename[fname[num_mappers - 1].index] = argv[i];
+            fname[num_mappers - 1].name[fname[num_mappers - 1].index] = argv[i];
             fname[num_mappers - 1].index++;
         }
         else {
-            fname[pos - 1].filename[fname[pos - 1].index] = argv[i];
+            fname[pos - 1].name[fname[pos - 1].index] = argv[i];
             fname[pos - 1].index++;
         }   
     }
     for(i = 0; i < num_mappers; i++) {
         if(fname[i].index == 0) {
-            fname[i].filename = NULL;
+            fname[i].name = NULL;
         }
     }
 
@@ -165,11 +176,39 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         qsort(table[i], pnum[i].index, sizeof(MR), cmpstringp);
     }
     
-    // TODO: map partitions to reducers and pass that as an arg to 
+    // TODO: map partitions to reducers and pass that as an arg to the reducer
+    part = (Part *)malloc(sizeof(Part) * num_reducers);
+    if (part == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
+    for(int i = 0; i < num_reducers; i++)
+    {
+        part[i].index = 0;
+    }
+
+    // Mapping partitions to their threads
+    for (i = 0; i < num_partitions; i++) {
+        pos = i % num_reducers;
+        if(pos == 0) {
+            part[num_reducers - 1].partition_no[part[num_reducers - 1].index] = i;
+            part[num_reducers - 1].index++;
+        }
+        else {
+            part[pos - 1].name[part[pos - 1].index] = i;
+            part[pos - 1].index++;
+        }   
+    }
+    for(i = 0; i < num_reducers; i++) {
+        if(part[i].index == 0) {
+            part[i].name = NULL;
+        }
+    }
 
     // Creating reducer threads
     for(i = 0; i < num_reducers; i++) {
-        pthread_create(&q[i], NULL, reducer_exe, (void *)??);
+        pthread_create(&q[i], NULL, reducer_exe, (void *)part[i]);
     }
 
     for(i = 0; i < num_reducers; i++) {
@@ -178,14 +217,33 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 }
 
 void *mapper_exe(void *arg) { 
-    struct fileName *fname = (struct MR *)arg;
+    struct fileName *fname = (struct fileName *)arg;
     for(int i = 0; i < fname.index; i++){
-        map(fname.filename[i]);
+        maps(fname.name[i]);
     }
     return NULL;
 }
 void *reducer_exe(void *arg) {
-
+    struct fileName *part = (struct Part *)arg;
+    unsigned long partition_num; 
+    char *distinctKey, *prevKey;
+    for(int i = 0; i < part.index; i++) {
+        partition_num = part.partition_no[i];
+        if(pnum[partition_num].index != 0){
+            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
+            for(int j = 0; j < pnum[partition_num].index; j++) {
+                strncpy(distinctKey, table[partition_num][j].key, strlen(table[partition_num][0].key));
+                if(strcmp(distinctKey, prevKey) != 0) {
+                    reducer(distinctKey, get_next, partition_num);
+                }
+                strncpy(prevKey, distinctKey);
+            }
+        }
+        else {
+            return NULL;
+        }
+    }
+    return NULL;
 }
 
 char *get_next(char *key, int num_partitions) {
@@ -193,7 +251,7 @@ char *get_next(char *key, int num_partitions) {
     pno = (*partitions)(key, num_partitions);
     for(int i = pnum[pno].get_index; i <= pnum[pno]->index; i++)
     {
-        if(strcmp(table[pno][i], key) == 0)
+        if(strcmp(table[pno][i].key, key) == 0)
         {
             pnum[pno].get_index++;
             return table[pno][i]->value;
