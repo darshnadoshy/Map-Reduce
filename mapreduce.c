@@ -30,15 +30,12 @@ Partitioner partitions;
 MR **table;
 fileName *fname1;
 Counter *pnum;
-
-static int cmpstringp(MR *p1, MR *p2)
-       {
-           /* The actual arguments to this function are "pointers to
-              pointers to char", but strcmp(3) arguments are "pointers
-              to char", hence the following cast plus dereference */
-
-           return strcmp(p1 -> key, p2->key);
-       }
+static int cmpstringp(const void *p1, const void *p2)
+{
+    const MR table1 =  * (MR *)p1;
+    const MR table2 = * (MR *)p2;
+    return strcmp(table1.key, table2.key);
+}
 
 
 void MR_Emit(char *key, char *value) {
@@ -48,20 +45,21 @@ void MR_Emit(char *key, char *value) {
     // TODO: What should be the length of the array? Need to figure out realloc()
     // Use locks
     unsigned long pno;
-    pno = (*partitions)(key, num_partitions);
-    if(pnum[pno]->index == pnum[pno]->MAX_SIZE)
+    pno = 1;
+    // pno = (*partitions)(key, num_partitions);
+    if(pnum[pno].index == pnum[pno].MAX_SIZE)
     {
-        pnum[pno]->MAX_SIZE = pnum[pno]->MAX_SIZE * 2;
-        table[pno] = (MR *)realloc(table[pno], (sizeof(MR) * pnum[pno]->MAX_SIZE));
+        pnum[pno].MAX_SIZE = pnum[pno].MAX_SIZE * 2;
+        table[pno] = (MR *)realloc(table[pno], (sizeof(MR) * pnum[pno].MAX_SIZE));
         if (table[pno] == NULL)
         {
             printf("Memory Allocation Failed!\n");
             exit(1);
         }
     }
-    if(pnum[pno]->index == 0)
+    if(pnum[pno].index == 0)
     {
-        table[pno] = (MR *)malloc(sizeof(MR) * MAX_SIZE);
+        table[pno] = (MR *)malloc(sizeof(MR) * pnum[pno].MAX_SIZE);
         if (table[pno] == NULL)
         {
             printf("Memory Allocation Failed!\n");
@@ -74,10 +72,12 @@ void MR_Emit(char *key, char *value) {
     // }
 
     // table[pno] = malloc(sizeof(MR) * length?);
-    table[pno][pnum[pno]->index]->key = key;
-    table[pno][pnum[pno]->index]->value = value;
-    pnum[pno]->index++;
+    table[pno][pnum[pno].index].key = key;
+    table[pno][pnum[pno].index].value = value;
+    printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
+    pnum[pno].index++;
 }
+
 
 // Got it from the specs
 unsigned long MR_DefaultHashPartition(char *key, int num_partitions) {
@@ -143,7 +143,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     // Code for qsort should go in here.
     // qsort();
     for(int i = 0; i < num_partitions; i++)
-        qsort(table[i], pnum[i]->index, sizeof(MR *), cmpstringp);
+        qsort(table[1], pnum[1].index, sizeof(MR), cmpstringp);
 
 
     for(i = 0; i < num_reducers; i++) {
