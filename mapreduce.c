@@ -33,23 +33,13 @@ MR **table;
 fileName *fname;
 Counter *pnum;
 
-<<<<<<< HEAD
-static int cmpstringp(MR *p1, MR *p2)
-       {
-           /* The actual arguments to this function are "pointers to
-              pointers to char", but strcmp(3) arguments are "pointers
-              to char", hence the following cast plus dereference */
 
-           return strcmp(p1->key, p2->key);
-       }
-=======
 static int cmpstringp(const void *p1, const void *p2)
 {
     const MR table1 =  * (MR *)p1;
     const MR table2 = * (MR *)p2;
     return strcmp(table1.key, table2.key);
 }
->>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 
 
 void MR_Emit(char *key, char *value) {
@@ -81,21 +71,11 @@ void MR_Emit(char *key, char *value) {
         }
         
     }
-<<<<<<< HEAD
-    table[pno][pnum[pno]->index]->key = key;
-    table[pno][pnum[pno]->index]->value = value;
-    pnum[pno]->index++;
-=======
-    // if(pnum[pno]->index < MAX_SIZE) {
-        
-    // }
-
-    // table[pno] = malloc(sizeof(MR) * length?);
+    
     table[pno][pnum[pno].index].key = key;
     table[pno][pnum[pno].index].value = value;
     // printf("Inserted: %s\n", table[pno][pnum[pno].index].key);
     pnum[pno].index++;
->>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 }
 
 
@@ -175,19 +155,9 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         pthread_join(p[i], NULL);
     }
     
-<<<<<<< HEAD
-    for(int i = 0; i < num_partitions; i++) {
-        qsort(table[i], pnum[i]->index, sizeof(MR *), cmpstringp);
-    }
-    
-    // TODO: map partitions to reducers and pass that as an arg to 
-=======
-    // Code for qsort should go in here.
-    // qsort();
     for(int i = 0; i < num_partitions; i++)
         qsort(table[1], pnum[1].index, sizeof(MR), cmpstringp);
 
->>>>>>> a3650b3f324a5381e030bdb4b0d41827935c1188
 
     for(i = 0; i < num_reducers; i++) {
         pthread_create(&q[i], NULL, reducer_exe, (void *)??);
