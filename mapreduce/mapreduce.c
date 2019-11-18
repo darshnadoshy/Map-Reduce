@@ -39,11 +39,56 @@ fileName *fname;
 Part *part;
 Counter *pnum;
 
+int part_no;
+
 static int cmpstringp(const void *p1, const void *p2)
 {
     const MR table1 =  * (MR *)p1;
     const MR table2 = * (MR *)p2;
     return strcmp(table1.key, table2.key);
+}
+
+char *get_next(char *key, int num_partitions) {
+    unsigned long pno;
+    pno = (*partitions)(key, num_partitions);
+    for(int i = pnum[pno].get_index; i <= pnum[pno].index; i++)
+    {
+        if(strcmp(table[pno][i].key, key) == 0)
+        {
+            pnum[pno].get_index++;
+            return table[pno][i].value;
+        }
+    }
+}
+
+void *mapper_exe(void *arg) { 
+    fileName *fname = (fileName *)arg;
+    for(int i = 0; i < fname->index; i++){
+        maps(fname->name[i]);
+    }
+    return NULL;
+}
+void *reducer_exe(void *arg) {
+    Part *part = (Part *)arg;
+    unsigned long partition_num; 
+    char *distinctKey, *prevKey;
+    for(int i = 0; i < part->index; i++) {
+        partition_num = part->partition_no[i];
+        if(pnum[partition_num].index != 0){
+            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
+            for(int j = 0; j < pnum[partition_num].index; j++) {
+                strncpy(distinctKey, table[partition_num][j].key, strlen(table[partition_num][0].key));
+                if(strcmp(distinctKey, prevKey) != 0) {
+                    reducers(distinctKey, get_next, partition_num);
+                }
+                strncpy(prevKey, distinctKey, strlen(distinctKey));
+            }
+        }
+        else {
+            return NULL;
+        }
+    }
+    return NULL;
 }
 
 void MR_Emit(char *key, char *value) {
@@ -53,7 +98,7 @@ void MR_Emit(char *key, char *value) {
     // TODO: What should be the length of the array? Need to figure out realloc()
     // Use locks
     unsigned long pno;
-    pno = (*partitions)(key, num_partitions);
+    pno = (*partitions)(key, part_no);
     if(pnum[pno].index == pnum[pno].MAX_SIZE)
     {
         pnum[pno].MAX_SIZE = pnum[pno].MAX_SIZE * 2;
@@ -103,6 +148,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     maps = (Mapper)map;
     reducers = reduce;
     partitions = partition;
+    part_no = num_partitions;
 
     // global_np = num_partitions;
     // This next line is sketchy. Change it later
@@ -158,7 +204,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     }
     for(i = 0; i < num_mappers; i++) {
         if(fname[i].index == 0) {
-            fname[i].name = NULL;
+            fname[i].name[0] = NULL;
         }
     }
 
@@ -195,19 +241,19 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             part[num_reducers - 1].index++;
         }
         else {
-            part[pos - 1].name[part[pos - 1].index] = i;
+            part[pos - 1].partition_no[part[pos - 1].index] = i;
             part[pos - 1].index++;
         }   
     }
     for(i = 0; i < num_reducers; i++) {
         if(part[i].index == 0) {
-            part[i].name = NULL;
+            part[i].partition_no[0] = 0;
         }
     }
 
     // Creating reducer threads
     for(i = 0; i < num_reducers; i++) {
-        pthread_create(&q[i], NULL, reducer_exe, (void *)part[i]);
+        pthread_create(&q[i], NULL, reducer_exe, (void *)&part[i]);
     }
 
     for(i = 0; i < num_reducers; i++) {
@@ -215,46 +261,4 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     }
 }
 
-void *mapper_exe(void *arg) { 
-    struct fileName *fname = (struct fileName *)arg;
-    for(int i = 0; i < fname.index; i++){
-        maps(fname.name[i]);
-    }
-    return NULL;
-}
-void *reducer_exe(void *arg) {
-    struct fileName *part = (struct Part *)arg;
-    unsigned long partition_num; 
-    char *distinctKey, *prevKey;
-    for(int i = 0; i < part.index; i++) {
-        partition_num = part.partition_no[i];
-        if(pnum[partition_num].index != 0){
-            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
-            for(int j = 0; j < pnum[partition_num].index; j++) {
-                strncpy(distinctKey, table[partition_num][j].key, strlen(table[partition_num][0].key));
-                if(strcmp(distinctKey, prevKey) != 0) {
-                    reducer(distinctKey, get_next, partition_num);
-                }
-                strncpy(prevKey, distinctKey);
-            }
-        }
-        else {
-            return NULL;
-        }
-    }
-    return NULL;
-}
-
-char *get_next(char *key, int num_partitions) {
-    unsigned long pno;
-    pno = (*partitions)(key, num_partitions);
-    for(int i = pnum[pno].get_index; i <= pnum[pno]->index; i++)
-    {
-        if(strcmp(table[pno][i].key, key) == 0)
-        {
-            pnum[pno].get_index++;
-            return table[pno][i]->value;
-        }
-    }
-}
 
