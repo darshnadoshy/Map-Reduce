@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "mapreduce.h"
 #include <pthread.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-#include "mapreduce.h"
 
 // TODO: Change implementation to linked lists!!
 
@@ -49,16 +49,21 @@ static int cmpstringp(const void *p1, const void *p2)
 }
 
 char *get_next(char *key, int num_partitions) {
+    int flag = 0;
     unsigned long pno;
     pno = (*partitions)(key, num_partitions);
     for(int i = pnum[pno].get_index; i <= pnum[pno].index; i++)
     {
         if(strcmp(table[pno][i].key, key) == 0)
         {
+            flag = 1;
             pnum[pno].get_index++;
             return table[pno][i].value;
         }
     }
+    if(flag == 0)
+        return NULL;
+    return NULL;
 }
 
 void *mapper_exe(void *arg) { 
@@ -71,7 +76,7 @@ void *mapper_exe(void *arg) {
 void *reducer_exe(void *arg) {
     Part *part = (Part *)arg;
     unsigned long partition_num; 
-    char *distinctKey, *prevKey;
+    char *distinctKey = NULL, *prevKey = NULL;
     for(int i = 0; i < part->index; i++) {
         partition_num = part->partition_no[i];
         if(pnum[partition_num].index != 0){
@@ -137,64 +142,56 @@ unsigned long MR_DefaultHashPartition(char *key, int num_partitions) {
 unsigned long MR_SortedPartition(char *key, int num_partitions) {
     // TODO: ensures  that keys are in a sorted order across the partitions 
     // (i.e., keys are not hashed into random partitions as in the default partition function)
-    int bits = 0;
-    int temp = num_partitions;
-    unsigned long temp_key;
-    while (temp >>= 1) bits++;
-    temp_key = strtoul(key, NULL, 0);
 
-    temp_key = temp_key >> (32 - bits);
-
-    int bits = 0;
-    int temp = num_partitions;
-    unsigned long temp_key = 0;
-    char key[] = "}}}}";
+    // int bits = 0;
+    // int temp = num_partitions;
+    // unsigned long temp_key = 0;
     
+    // while (temp >>= 1) bits++;
+    // // printf("Bits: %d\n",bits);
     
-    while (temp >>= 1) bits++;
-    // printf("Bits: %d\n",bits);
+    // int len = 0;
+    // // printf("Length: %d\n", strlen(key));
+    // if(strlen(key) >= 4)
+    //     len = 4;
+    // else 
+    //     len = strlen(key);
     
-    int len = 0;
-    // printf("Length: %d\n", strlen(key));
-    if(strlen(key) >= 4)
-        len = 4;
-    else 
-        len = strlen(key);
+    // // printf("Before: %lu \n", temp_key);
+    // if(len == 4) 
+    // {
+    //     for(int i = 0; i < 4; i++)
+    //     {
+    //         // printf("key[%d] = %lu\n", i , (unsigned long) key[i]);
+    //         temp_key = temp_key << 8;
+    //         if(key[i]!= NULL)
+    //             temp_key += (unsigned long) key[i];
+    //         // printf("Inside: %lu \n", temp_key);
+    //     }
+    // }
+    // else
+    // {
+    //     int i = 0;
+    //     int mov = (8 *(4 - len));
+    //     temp_key = temp_key << mov;
+    //     // printf("Temp: %lu \n", temp_key);
+    //     while(len != 0)
+    //     {
+    //         temp_key = temp_key << 8;
+    //         temp_key += (unsigned long) key[i];
+    //         // printf("Inside: %lu \n", temp_key);
+    //         len--;
+    //         i++;
+    //     }
+    // }
+    // temp_key = temp_key >> (32 - bits);
     
-    // printf("Before: %lu \n", temp_key);
-    if(len == 4) 
-    {
-        for(int i = 0; i < 4; i++)
-        {
-            // printf("key[%d] = %lu\n", i , (unsigned long) key[i]);
-            temp_key = temp_key << 8;
-            if(key[i]!= NULL)
-                temp_key += (unsigned long) key[i];
-            // printf("Inside: %lu \n", temp_key);
-        }
-    }
-    else
-    {
-        int i = 0;
-        int mov = (8 *(4 - len));
-        temp_key = temp_key << mov;
-        // printf("Temp: %lu \n", temp_key);
-        while(len != 0)
-        {
-            temp_key = temp_key << 8;
-            temp_key += (unsigned long) key[i];
-            // printf("Inside: %lu \n", temp_key);
-            len--;
-            i++;
-        }
-    }
-    temp_key = temp_key >> (32 - bits);
+    // // printf("After: %lu \n", temp_key);
     
     // printf("After: %lu \n", temp_key);
-    
-    printf("After: %lu \n", temp_key);
 
-    return temp_key;
+    // return temp_key;
+    return 0;
 }
 
 
@@ -207,12 +204,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     partitions = partition;
     part_no = num_partitions;
 
-    // global_np = num_partitions;
-    // This next line is sketchy. Change it later
-    // pnum = calloc(num_partitions, sizeof(Counter));
+    printf("Starting MR_Run()\n");
 
     // Set the initial values of the partition counters
     pnum = (Counter *)malloc(sizeof(Counter) * num_partitions);
+    if (pnum == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
     for(int i = 0; i < num_partitions; i++)
     {
         pnum[i].index = 0;
@@ -223,13 +223,13 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     pthread_t p[num_mappers];
     pthread_t q[num_reducers];
 
-    //struct MR *table = malloc(sizeof(MR) * num_partitions);
     table = (MR **)malloc(sizeof(MR *) * num_partitions);
     if (table == NULL)
     {
         printf("Memory Allocation Failed\n");
         exit(1);
     }
+    printf("Created table\n");
 
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
@@ -264,6 +264,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             fname[i].name[0] = NULL;
         }
     }
+    printf("Done mapping 1\n");
 
     // Creating mapper threads
     for(i = 0; i < num_mappers; i++) {
@@ -273,6 +274,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     for(i = 0; i < num_mappers; i++) {
         pthread_join(p[i], NULL);
     }
+    printf("Created mapper threads\n");
     
     for(int i = 0; i < num_partitions; i++) {
         qsort(table[i], pnum[i].index, sizeof(MR), cmpstringp);
@@ -307,6 +309,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             part[i].partition_no[0] = 0;
         }
     }
+    printf("Done mapping 2\n");
 
     // Creating reducer threads
     for(i = 0; i < num_reducers; i++) {
@@ -316,56 +319,20 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     for(i = 0; i < num_reducers; i++) {
         pthread_join(q[i], NULL);
     }
-}
+    printf("Created reducer threads\n");
 
-<<<<<<< HEAD
-=======
-void *mapper_exe(void *arg) { 
-    struct fileName *fname = (struct fileName *)arg;
-    for(int i = 0; i < fname.index; i++){
-        maps(fname.name[i]);
-    }
-    return NULL;
-}
-void *reducer_exe(void *arg) {
-    struct fileName *part = (struct Part *)arg;
-    unsigned long partition_num; 
-    char *distinctKey, *prevKey;
-    for(int i = 0; i < part.index; i++) {
-        partition_num = part.partition_no[i];
-        if(pnum[partition_num].index != 0){
-            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
-            for(int j = 0; j < pnum[partition_num].index; j++) {
-                strncpy(distinctKey, table[partition_num][j].key, strlen(table[partition_num][0].key));
-                if(strcmp(distinctKey, prevKey) != 0) {
-                    reducer(distinctKey, get_next, partition_num);
-                }
-                strncpy(prevKey, distinctKey);
-            }
-        }
-        else {
-            return NULL;
-        }
-    }
-    return NULL;
-}
+    free(fname);
+    fname = NULL;
 
-char *get_next(char *key, int num_partitions) {
-    unsigned long pno;
-    int flag = 0;
-    pno = (*partitions)(key, num_partitions);
-    for(int i = pnum[pno].get_index; i <= pnum[pno]->index; i++)
-    {
-        if(strcmp(table[pno][i].key, key) == 0)
-        {
-            flag = 1;
-            pnum[pno].get_index++;
-            return table[pno][i]->value;
-        }
+    for(i = 0; i < num_partitions; i++) {
+        free(table[i]);
+        table[i] = NULL;
     }
-    //if key is not found
-    if(flag == 0)
-        return NULL;
-}
->>>>>>> 926dcfc2a0f42665b5da54154acb6b2aa1903d90
+    free(table);
+    table = NULL;
 
+    free(pnum);
+    pnum = NULL;
+
+    printf("Freed stuff\n");
+}
