@@ -1,0 +1,1 @@
+../tester/run-tests.sh: line 57: 12734 Segmentation fault      (core dumped) ./wordcount tests/1.txt tests/2.txt tests/3.txt tests/4.txt tests/5.txt 5 10 10 > tests-out/16.mid

@@ -124,14 +124,62 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
     return 0;
 }
 
+// Adding a mapper wrapper
+
+void *mapper_exe(void *arg) { 
+    fileName *fname = (fileName *)arg;
+    for(int i = 0; i < fname->index; i++) {
+        maps(fname->name[i]);
+    }
+    return NULL;
+}
+
+// Adding a reducer wrapper
+
+void *reducer_exe(void *arg) {
+    Part *part = (Part *)arg;
+    unsigned long partition_num;
+    char *distinctKey, *prevKey;
+    prevKey = malloc(sizeof(char)*100);
+    distinctKey = malloc(sizeof(char)*100);
+    //printf("Reducer starts here\n");
+    //printf("num_reducers = %d, i = %d\n", num_reducers, i);
+    for(int j = 0; j < part->index; j++) {
+        //printf("part[i].index = %d, j = %d\n", part[i].index, j);
+        partition_num = part->partition_no[j];
+        //printf("partition_num = %ld\n", partition_num);
+        if(pnum[partition_num].index != 0) {
+            //printf("pnum[%ld].index = %d\n", partition_num, pnum[partition_num].index);
+            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
+            //printf("prevKey = %s\n", prevKey);
+            //strcpy(prevKey, table[partition_num][0].key);
+            for(int k = 0; k < pnum[partition_num].index; k++) {
+                //strncpy(distinctKey, table[partition_num][k].key, strlen(table[partition_num][k].key));
+                strcpy(distinctKey, table[partition_num][k].key);
+                //printf("distinctKey = %s\n", distinctKey);
+                //strcpy(distinctKey, table[partition_num][j].key);
+                if(strcmp(distinctKey, prevKey) != 0 || k == 0) {
+                    reducers(distinctKey, get_next, partition_num);
+                }
+            // strncpy(prevKey, distinctKey, strlen(distinctKey));
+            strcpy(prevKey, distinctKey);
+            }
+        }
+    }
+    return NULL;
+}
+
 void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce, 
             int num_reducers, Partitioner partition, int num_partitions) {
-    int i, j;
+    int i;
 
     maps = map;
     reducers = reduce;
     partitions = partition;
     part_no = num_partitions;
+
+    pthread_t p[num_mappers];
+    pthread_t q[num_reducers];
 
     //printf("Starting MR_Run()\n");
 
@@ -205,14 +253,18 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     //     }
     // }
 
-    for (i = 0; i < num_mappers; i++) {
-        if(fname[i].index != 0) {
-            for( j = 0; j < fname[i].index; j++) {
-                map(fname[i].name[j]);
-            }
-        }
+    // Creating the mapper threads
+    // Creating mapper threads
+    for(i = 0; i < num_mappers; i++) {
+        if(fname[i].index !=0) // Create threads only if there are files assigned to it.
+            pthread_create(&p[i], NULL, mapper_exe, (void *)&fname[i]);
     }
 
+    for(i = 0; i < num_mappers; i++) {
+        pthread_join(p[i], NULL);
+    }
+
+    // Sorting the buckets of each partition
     for(i = 0; i < num_partitions; i++) {
         qsort(table[i], pnum[i].index, sizeof(MR), cmpstringp);
     }
@@ -276,35 +328,16 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     //     }
     // }
 
-    unsigned long partition_num;
-    char *distinctKey, *prevKey;
-    prevKey = malloc(sizeof(char)*100);
-    distinctKey = malloc(sizeof(char)*100);
-    //printf("Reducer starts here\n");
-    for (i = 0; i < num_reducers; i++) {
-        //printf("num_reducers = %d, i = %d\n", num_reducers, i);
-        for(int j = 0; j < part[i].index; j++) {
-            //printf("part[i].index = %d, j = %d\n", part[i].index, j);
-            partition_num = part[i].partition_no[j];
-            //printf("partition_num = %ld\n", partition_num);
-            if(pnum[partition_num].index != 0) {
-                //printf("pnum[%ld].index = %d\n", partition_num, pnum[partition_num].index);
-                 strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
-                 //printf("prevKey = %s\n", prevKey);
-                // //strcpy(prevKey, table[partition_num][0].key);
-                 for(int k = 0; k < pnum[partition_num].index; k++) {
-                     //strncpy(distinctKey, table[partition_num][k].key, strlen(table[partition_num][k].key));
-                     strcpy(distinctKey, table[partition_num][k].key);
-                     //printf("distinctKey = %s\n", distinctKey);
-                //     //strcpy(distinctKey, table[partition_num][j].key);
-                     if(strcmp(distinctKey, prevKey) != 0 || k == 0) {
-                         reduce(distinctKey, get_next, partition_num);
-                     }
-                // strncpy(prevKey, distinctKey, strlen(distinctKey));
-                strcpy(prevKey, distinctKey);
-                 }
-            }
-        }
+    
+    // Create reducer threads
+    // Creating reducer threads
+    for(i = 0; i < num_reducers; i++) {
+        if(part[i].index != 0)
+            pthread_create(&q[i], NULL, reducer_exe, (void *)&part[i]);
+    }
+
+    for(i = 0; i < num_reducers; i++) {
+        pthread_join(q[i], NULL);
     }
 
     // printf("::DEBUG:: Hash Table\n");
