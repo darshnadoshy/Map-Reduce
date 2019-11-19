@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <semaphore.h>
 
+pthread_mutex_t *lock;
+
 // Declaring data structure
 typedef struct MR{
   char *key;
@@ -14,7 +16,7 @@ typedef struct MR{
 
 typedef struct {
     int index;
-    char *name[];
+    char **name;
 }fileName;
 
 typedef struct {
@@ -67,8 +69,10 @@ void MR_Emit(char *key, char *value) {
     // such that later reducers can access them, given constraints. 
 
     // printf("In MR_Emit()\n");
+    // fflush(stdout);
     unsigned long pno;
     pno = (*partitions)(key, part_no);
+    pthread_mutex_lock(&lock[pno]);
     // printf("pno = %lu\n", pno);
     if(pnum[pno].index == 0)
     {
@@ -109,6 +113,7 @@ void MR_Emit(char *key, char *value) {
     strcpy(table[pno][pnum[pno].index].key, key);
     strcpy(table[pno][pnum[pno].index].value, value);
     pnum[pno].index++;
+    pthread_mutex_unlock(&lock[pno]);
 }
 
 // Got it from the specs
@@ -178,6 +183,14 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     partitions = partition;
     part_no = num_partitions;
 
+    lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * num_partitions);
+    for(int i = 0; i < num_partitions; i++) {
+        if(pthread_mutex_init(&lock[i] , NULL) != 0) {
+            printf("Failed to init lock\n");
+            exit(1);
+        }
+    }
+
     pthread_t p[num_mappers];
     pthread_t q[num_reducers];
 
@@ -218,12 +231,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     for( i = 0; i < num_mappers; i++)
     {
         fname[i].index = 0;
+        fname[i].name = (char**)malloc(sizeof(char*)*10);
     }
 
     // Mapping files to their threads
     // TODO: Sort files according to their size and then map them
     for (i = 1; i < argc; i++) {
         pos = i % num_mappers;
+        // printf("In file partition\n");
+        // fflush(stdout);
         if(pos == 0) {
             fname[num_mappers - 1].name[fname[num_mappers - 1].index] = (char *)malloc(sizeof(char)*strlen(argv[i]));
             fname[num_mappers - 1].name[fname[num_mappers - 1].index] = argv[i];
@@ -235,14 +251,15 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             fname[pos - 1].index++;
         }   
     }
+
     // TODO: num_files < num_mappers
-    if(argc - 1 < num_mappers) {
-        for(i = 0; i < num_mappers; i++) {
-            if(fname[i].index == 0) {
-                strcpy(fname[i].name[0], "\0");
-            }
-        }
-    }
+    // if(argc - 1 < num_mappers) {
+    //     for(i = 0; i < num_mappers; i++) {
+    //         if(fname[i].index == 0) {
+    //             strcpy(fname[i].name[0], "\0");
+    //         }
+    //     }
+    // }
     //printf("Done mapping 1\n");
 
     // printf("::DEBUG:: Printing mapped filenames\n");

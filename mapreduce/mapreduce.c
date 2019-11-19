@@ -171,7 +171,7 @@ void *reducer_exe(void *arg) {
 
 void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce, 
             int num_reducers, Partitioner partition, int num_partitions) {
-    int i;
+    int i, j;
 
     maps = map;
     reducers = reduce;
@@ -203,8 +203,8 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         printf("Memory Allocation Failed\n");
         exit(1);
     }
-    //printf("Created table\n");
-
+    printf("Created table\n");
+    fflush(stdout);
     // TODO: Need to do some sort of scheduling to map the files to the mappers
     // and maybe pass those as parameters to mappers_exe
 
@@ -243,8 +243,8 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             }
         }
     }
-    //printf("Done mapping 1\n");
-
+    printf("Done mapping 1\n");
+    fflush(stdout);
     // printf("::DEBUG:: Printing mapped filenames\n");
     // printf("#files = %d num_mappers = %d\n", argc - 1, num_mappers);
     // for(i = 0; i < num_mappers; i++) {
@@ -317,8 +317,8 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     //         part[i].partition_no[0] = 0;
     //     }
     // }
-    //printf("Done mapping 2\n");
-
+    printf("Done mapping 2\n");
+    fflush(stdout);
     // printf("::DEBUG:: Printing mapped partitions\n");
     // fflush(stdout);
     // printf("num_reducers = %d num_partitions = %d\n", num_reducers, num_partitions);
@@ -340,13 +340,17 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         pthread_join(q[i], NULL);
     }
 
-    // printf("::DEBUG:: Hash Table\n");
-    // for(i = 0; i < num_partitions; i++) {
-    //     for( j = 0; j < pnum[i].index; j++) {
-    //         printf("key = %s value = %s pno = %d\n", table[i][j].key, table[i][j].value, i);
-    //     }
-    //     printf("\n");
-    // }
+
+
+    printf("::DEBUG:: Hash Table\n");
+    for(i = 0; i < num_partitions; i++) {
+        for( j = 0; j < pnum[i].index; j++) {
+            printf("key = %s value = %s pno = %d\n", table[i][j].key, table[i][j].value, i);
+            fflush(stdout);
+        }
+        printf("\n");
+        fflush(stdout);
+    }
 
     // Free Stuff
 
