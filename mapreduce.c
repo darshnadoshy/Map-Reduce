@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-// #include <time.h>
+#include <time.h>
 
 pthread_mutex_t *lock;
 
@@ -50,18 +50,18 @@ static int cmpstringp(const void *p1, const void *p2)
 }
 
 char *get_next(char *key, int part_num) {
-    int flag = 0;
     for(int i = pnum[part_num].get_index; i < pnum[part_num].index; i++)
     {
         if(strcmp(table[part_num][i].key, key) == 0)
         {
-            flag = 1;
             pnum[part_num].get_index++;
             return table[part_num][i].value;
         }
+        else
+        {
+            break;
+        }
     }
-    if(flag == 0)
-        return NULL;
     return NULL;
 }
 
@@ -162,10 +162,9 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
 void *mapper_exe(void *arg) { 
     fileName *fname = (fileName *)arg;
     for(int i = 0; i < fname->index; i++) {
-        // clock_t start = clock();
+        
         maps(fname->name[i]);
-        // clock_t end = clock();
-        // printf("Mapper %d: %Lf\n",i, (long double)(end - start)/CLOCKS_PER_SEC);
+        
     }
     return NULL;
 }
@@ -176,39 +175,19 @@ void *reducer_exe(void *arg) {
     Part *part = (Part *)arg;
     unsigned long partition_num;
     char *distinctKey, *prevKey;
-    prevKey = malloc(sizeof(char)*100);
     distinctKey = malloc(sizeof(char)*100);
-    //printf("Reducer starts here\n");
-    //printf("num_reducers = %d, i = %d\n", num_reducers, i);
     for(int j = 0; j < part->index; j++) {
-        //printf("part[i].index = %d, j = %d\n", part[i].index, j);
         partition_num = part->partition_no[j];
         // Sort here to improve speed!!
         qsort(table[partition_num], pnum[partition_num].index, sizeof(MR), cmpstringp);
-        //printf("partition_num = %ld\n", partition_num);
         if(pnum[partition_num].index != 0) {
-            //printf("pnum[%ld].index = %d\n", partition_num, pnum[partition_num].index);
-            strncpy(prevKey, table[partition_num][0].key, strlen(table[partition_num][0].key));
-            //printf("prevKey = %s\n", prevKey);
-            //strcpy(prevKey, table[partition_num][0].key);
-            for(int k = 0; k < pnum[partition_num].index; k++) {
-                //strncpy(distinctKey, table[partition_num][k].key, strlen(table[partition_num][k].key));
-                strcpy(distinctKey, table[partition_num][k].key);
-                //printf("distinctKey = %s\n", distinctKey);
-                //strcpy(distinctKey, table[partition_num][j].key);
-                if(strcmp(distinctKey, prevKey) != 0 || k == 0) {
-                    // clock_t start = clock();
-                    reducers(distinctKey, get_next, partition_num);
-                    // clock_t end = clock();
-                    // printf("Reducer %d: %Lf\n",k , (long double)(end - start)/CLOCKS_PER_SEC);
-                }
-            // strncpy(prevKey, distinctKey, strlen(distinctKey));
-            strcpy(prevKey, distinctKey);
+            for(int k = 0; k < pnum[partition_num].index;) {
+                strcpy(distinctKey, table[partition_num][k].key);   
+                reducers(distinctKey, get_next, partition_num);
+                k = pnum[partition_num].get_index;
             }
         }
     }
-    free(prevKey);
-    prevKey = NULL;
     free(distinctKey);
     distinctKey = NULL;
     return NULL;
@@ -319,6 +298,9 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     // Creating the mapper threads
     // Creating mapper threads
+
+    // clock_t start = clock();
+
     for(i = 0; i < mthread_size; i++) {
         if(fname[i].index !=0) // Create threads only if there are files assigned to it.
             pthread_create(&p[i], NULL, mapper_exe, (void *)&fname[i]);
@@ -329,6 +311,9 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             pthread_join(p[i], NULL);
     }
 
+    // clock_t end = clock();
+    // printf("Mapper time is: %Lf\n",(long double)(end - start)/CLOCKS_PER_SEC);
+    // fflush(stdout);
     // Sorting the buckets of each partition
     // for(i = 0; i < num_partitions; i++) {
     //     qsort(table[i], pnum[i].index, sizeof(MR), cmpstringp);
@@ -402,6 +387,9 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     
     // Creating reducer threads
+
+    // start = clock();
+
     for(i = 0; i < rthread_size; i++) {
         //if(part[i].index != 0)
             pthread_create(&q[i], NULL, reducer_exe, (void *)&part[i]);
@@ -412,6 +400,9 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             pthread_join(q[i], NULL);
     }
 
+    // end = clock();
+    // printf("Reducer time is: %Lf\n",(long double)(end - start)/CLOCKS_PER_SEC);
+    // fflush(stdout);
     // printf("::DEBUG:: Hash Table\n");
     // for(i = 0; i < num_partitions; i++) {
     //     for( j = 0; j < pnum[i].index; j++) {
