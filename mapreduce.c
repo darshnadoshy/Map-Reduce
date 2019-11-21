@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+// #include <time.h>
 
 pthread_mutex_t *lock;
 
@@ -161,7 +162,10 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
 void *mapper_exe(void *arg) { 
     fileName *fname = (fileName *)arg;
     for(int i = 0; i < fname->index; i++) {
+        // clock_t start = clock();
         maps(fname->name[i]);
+        // clock_t end = clock();
+        // printf("Mapper %d: %Lf\n",i, (long double)(end - start)/CLOCKS_PER_SEC);
     }
     return NULL;
 }
@@ -193,13 +197,20 @@ void *reducer_exe(void *arg) {
                 //printf("distinctKey = %s\n", distinctKey);
                 //strcpy(distinctKey, table[partition_num][j].key);
                 if(strcmp(distinctKey, prevKey) != 0 || k == 0) {
+                    // clock_t start = clock();
                     reducers(distinctKey, get_next, partition_num);
+                    // clock_t end = clock();
+                    // printf("Reducer %d: %Lf\n",k , (long double)(end - start)/CLOCKS_PER_SEC);
                 }
             // strncpy(prevKey, distinctKey, strlen(distinctKey));
             strcpy(prevKey, distinctKey);
             }
         }
     }
+    free(prevKey);
+    prevKey = NULL;
+    free(distinctKey);
+    distinctKey = NULL;
     return NULL;
 }
 
@@ -259,16 +270,16 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         mthread_size = argc - 1;
     }
     fname = (fileName *)malloc(sizeof(fileName) * mthread_size);
-        if (fname == NULL)
-        {
-            printf("Memory Allocation Failed\n");
-            exit(1);
-        }
-        for( i = 0; i < mthread_size; i++)
-        {
-            fname[i].index = 0;
-            fname[i].name = (char**)malloc(sizeof(char*)*10);
-        }
+    if (fname == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
+    for( i = 0; i < mthread_size; i++)
+    {
+        fname[i].index = 0;
+        fname[i].name = (char**)malloc(sizeof(char*)*10);
+    }
 
     // Mapping files to their threads
     // TODO: Sort files according to their size and then map them
@@ -340,16 +351,16 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         rthread_size = num_partitions;
     }
     part = (Part *)malloc(sizeof(Part) * rthread_size);
-        if (part == NULL)
-        {
-            printf("Memory Allocation Failed\n");
-            exit(1);
-        }
-        for( i = 0; i < rthread_size; i++)
-        {
-            part[i].index = 0;
-            part[i].partition_no = (unsigned long *)malloc(sizeof(unsigned long)*num_partitions);
-        }
+    if (part == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(1);
+    }
+    for( i = 0; i < rthread_size; i++)
+    {
+        part[i].index = 0;
+        part[i].partition_no = (unsigned long *)malloc(sizeof(unsigned long)*num_partitions);
+    }
 
     // Mapping partitions to their threads
     for (unsigned long i = 0; i < num_partitions; i++) {
@@ -390,7 +401,6 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     // }
 
     
-    // Create reducer threads
     // Creating reducer threads
     for(i = 0; i < rthread_size; i++) {
         //if(part[i].index != 0)
@@ -412,20 +422,54 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
 
     // Free Stuff
 
-    // TODO: Free key and value of table
+    
 
-    // free(fname);
-    // fname = NULL;
+    // For MR_emit
 
-    // for(i = 0; i < num_partitions; i++) {
-    //     free(table[i]);
-    //     table[i] = NULL;
-    // }
-    // free(table);
-    // table = NULL;
+    for(int i = 0; i < num_partitions; i++)
+    {
+        for(int j = 0; j < pnum[i].index; j++)
+        {
+            free(table[i][j].key);
+            table[i][j].key = NULL;
+            free(table[i][j].value);
+            table[i][j].value = NULL;
+        }
+        free(table[i]);
+        table[i] = NULL;
+    }
+    free(table);
+    table = NULL;
 
-    // free(pnum);
-    // pnum = NULL;
+    // MR_run
+
+    free(lock);
+    lock = NULL;
+
+    free(pnum);
+    pnum = NULL;
+
+    for(int i = 0; i < mthread_size; i++)
+    {
+        for(int j = 0; j < 10; j++)
+        {
+            fname[i].name[j] = NULL;
+            free(fname[i].name[j]);
+            
+        }
+        free(fname[i].name);
+        fname[i].name = NULL;
+    }
+    free(fname);
+    fname = NULL;
+        
+    for(int i = 0; i < rthread_size; i++)
+    {
+        free(part[i].partition_no);
+        part[i].partition_no = NULL;
+    }
+    free(part);
+    part = NULL;
 
     // printf("Freed stuff\n");
 }
