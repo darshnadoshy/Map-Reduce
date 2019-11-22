@@ -5,7 +5,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-#include <time.h>
 
 pthread_mutex_t *lock;
 
