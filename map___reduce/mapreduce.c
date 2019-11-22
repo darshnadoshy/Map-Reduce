@@ -154,9 +154,7 @@ unsigned long MR_SortedPartition(char *key, int num_partitions) {
 void *mapper_exe(void *arg) { 
     fileName *fname = (fileName *)arg;
     for(int i = 0; i < fname->index; i++) {
-        
-        maps(fname->name[i]);
-        
+        maps(fname->name[i]); 
     }
     return NULL;
 }
@@ -166,22 +164,17 @@ void *mapper_exe(void *arg) {
 void *reducer_exe(void *arg) {
     Part *part = (Part *)arg;
     unsigned long partition_num;
-    char *distinctKey, *prevKey;
-    distinctKey = malloc(sizeof(char)*100);
     for(int j = 0; j < part->index; j++) {
         partition_num = part->partition_no[j];
         // Sort here to improve speed!!
         qsort(table[partition_num], pnum[partition_num].index, sizeof(MR), cmpstringp);
         if(pnum[partition_num].index != 0) {
-            for(int k = 0; k < pnum[partition_num].index;) {
-                strcpy(distinctKey, table[partition_num][k].key);   
-                reducers(distinctKey, get_next, partition_num);
+            for(int k = 0; k < pnum[partition_num].index;) {   
+                reducers(table[partition_num][k].key, get_next, partition_num);
                 k = pnum[partition_num].get_index;
             }
         }
     }
-    free(distinctKey);
-    distinctKey = NULL;
     return NULL;
 }
 
@@ -243,7 +236,7 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         printf("Memory Allocation Failed\n");
         exit(1);
     }
-    for( i = 0; i < mthread_size; i++)
+    for(i = 0; i < mthread_size; i++)
     {
         fname[i].index = 0;
         fname[i].name = (char**)malloc(sizeof(char*)*10);
@@ -255,12 +248,12 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
         pos = i % num_mappers;
         if(pos == 0) {
             fname[num_mappers - 1].name[fname[num_mappers - 1].index] = (char *)malloc(sizeof(char)*strlen(argv[i]));
-            fname[num_mappers - 1].name[fname[num_mappers - 1].index] = argv[i];
+            strcpy(fname[num_mappers - 1].name[fname[num_mappers - 1].index],argv[i]);
             fname[num_mappers - 1].index++;
         }
         else {
             fname[pos - 1].name[fname[pos - 1].index] = (char *)malloc(sizeof(char)*strlen(argv[i]));
-            fname[pos - 1].name[fname[pos - 1].index] = argv[i];
+            strcpy(fname[pos - 1].name[fname[pos - 1].index], argv[i]);
             fname[pos - 1].index++;
         }   
     }
@@ -322,8 +315,28 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
             pthread_join(q[i], NULL);
     }
 
-    // For MR_emit
 
+    for(int i = 0; i < rthread_size; i++)
+    {
+        free(part[i].partition_no);
+        part[i].partition_no = NULL;
+    }
+    free(part);
+    part = NULL;
+
+    for(int i = 0; i < mthread_size; i++)
+    {
+        for(int j = 0; j < fname[i].index; j++)
+        {
+            free(fname[i].name[j]);
+            fname[i].name[j] = NULL;
+        }
+        free(fname[i].name);
+        fname[i].name = NULL;
+    }
+    free(fname);
+    fname = NULL;
+        
     for(int i = 0; i < num_partitions; i++)
     {
         for(int j = 0; j < pnum[i].index; j++)
@@ -339,34 +352,10 @@ void MR_Run(int argc, char *argv[], Mapper map, int num_mappers, Reducer reduce,
     free(table);
     table = NULL;
 
-    // MR_run
-
-    free(lock);
-    lock = NULL;
-
     free(pnum);
     pnum = NULL;
 
-    for(int i = 0; i < mthread_size; i++)
-    {
-        for(int j = 0; j < 10; j++)
-        {
-            fname[i].name[j] = NULL;
-            free(fname[i].name[j]);
-            
-        }
-        free(fname[i].name);
-        fname[i].name = NULL;
-    }
-    free(fname);
-    fname = NULL;
-        
-    for(int i = 0; i < rthread_size; i++)
-    {
-        free(part[i].partition_no);
-        part[i].partition_no = NULL;
-    }
-    free(part);
-    part = NULL;
+    free(lock);
+    lock = NULL;
 }
 
