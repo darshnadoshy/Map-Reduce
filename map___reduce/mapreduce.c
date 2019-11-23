@@ -64,6 +64,34 @@ char * get_next(char * key, int part_num) {
   return NULL;
 }
 
+// Adding a mapper wrapper
+void * mapper_exe(void * arg) {
+  fileName * fname = (fileName *) arg;
+  for (int i = 0; i < fname->index; i++) {
+    maps(fname->name[i]);
+  }
+  return NULL;
+}
+
+// Adding a reducer wrapper
+void * reducer_exe(void * arg) {
+  Part * part = (Part *) arg;
+  unsigned long partition_num;
+  for (int j = 0; j < part-> index; j++) {
+    partition_num = part->partition_no[j];
+    // Sort here to improve speed
+    qsort(table[partition_num], pnum[partition_num].index,
+    sizeof(MR), cmpstringp);
+    if (pnum[partition_num].index != 0) {
+      for (int k = 0; k < pnum[partition_num].index;) {
+        reducers(table[partition_num][k].key, get_next, partition_num);
+        k = pnum[partition_num].get_index;
+      }
+    }
+  }
+  return NULL;
+}
+
 void MR_Emit(char * key, char * value) {
   unsigned long pno;
   pno = (* partitions)(key, part_no);
@@ -137,34 +165,6 @@ unsigned long MR_SortedPartition(char * key, int num_partitions) {
   return temp_key;
 }
 
-// Adding a mapper wrapper
-void * mapper_exe(void * arg) {
-  fileName * fname = (fileName *) arg;
-  for (int i = 0; i < fname->index; i++) {
-    maps(fname->name[i]);
-  }
-  return NULL;
-}
-
-// Adding a reducer wrapper
-void * reducer_exe(void * arg) {
-  Part * part = (Part *) arg;
-  unsigned long partition_num;
-  for (int j = 0; j < part-> index; j++) {
-    partition_num = part->partition_no[j];
-    // Sort here to improve speed
-    qsort(table[partition_num], pnum[partition_num].index,
-    sizeof(MR), cmpstringp);
-    if (pnum[partition_num].index != 0) {
-      for (int k = 0; k < pnum[partition_num].index;) {
-        reducers(table[partition_num][k].key, get_next, partition_num);
-        k = pnum[partition_num].get_index;
-      }
-    }
-  }
-  return NULL;
-}
-
 void MR_Run(int argc, char * argv[], Mapper map, int num_mappers,
 Reducer reduce, int num_reducers, Partitioner partition, int num_partitions) {
   int i;
@@ -187,6 +187,7 @@ Reducer reduce, int num_reducers, Partitioner partition, int num_partitions) {
     printf("Memory Allocation Failed\n");
     exit(1);
   }
+
   pthread_t *q = (pthread_t *)malloc(sizeof(pthread_t)*num_reducers);
   if (q == NULL) {
     printf("Memory Allocation Failed\n");
@@ -302,6 +303,7 @@ Reducer reduce, int num_reducers, Partitioner partition, int num_partitions) {
     free(part[i].partition_no);
     part[i].partition_no = NULL;
   }
+
   free(part);
   part = NULL;
 
